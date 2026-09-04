@@ -83,9 +83,41 @@
   --radius-lg:26px;
   --radius-md:18px;
   --radius-sm:12px;
+  /* Adaptive perf variables - overridden per device tier by JS below */
+  --blur-glass:28px;
+  --blur-pill:22px;
+  --blur-btn:16px;
+  --blur-sat:180%;
+  --blob-blur:90px;
 }
+/* GPU/perf tiers, applied to <html> at runtime after a capability + real-frame-time probe */
+html.gfx-medium{
+  --blur-glass:16px;
+  --blur-pill:13px;
+  --blur-btn:11px;
+  --blur-sat:150%;
+  --blob-blur:60px;
+}
+html.gfx-low{
+  --blur-glass:0px;
+  --blur-pill:0px;
+  --blur-btn:0px;
+  --blur-sat:100%;
+  --blob-blur:36px;
+}
+/* While the page is actively scrolling, drop blur to zero so the compositor never falls
+   behind — this is what was causing "blank until scroll stops": recomputing blurred
+   backdrop-filter layers under fast scroll couldn't keep up with the frame rate. */
+html.is-scrolling{
+  --blur-glass:0px;
+  --blur-pill:0px;
+  --blur-btn:0px;
+}
+html.is-scrolling .blob{animation-play-state:paused;}
+html.tab-hidden .blob{animation-play-state:paused;}
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;height:100%;}
+html{scroll-behavior:smooth;}
 body{
   font-family:'Inter', sans-serif;
   color:var(--text-primary);
@@ -106,7 +138,7 @@ a{color:inherit;}
   radial-gradient(ellipse at top, #2A3358 0%, #212842 55%, #161B30 100%);
 }
 .blob-wrap{position:absolute; inset:0; will-change:transform; transition:transform .35s cubic-bezier(.2,.8,.2,1);}
-.blob{position:absolute; border-radius:50%; filter:blur(90px); opacity:0.38; will-change:transform;}
+.blob{position:absolute; border-radius:50%; filter:blur(var(--blob-blur)); opacity:0.38; will-change:transform; transform:translateZ(0); contain:layout style paint;}
 .blob1{width:46vw; height:46vw; top:-12vw; left:-10vw; background:radial-gradient(circle at 30% 30%, #F0E7D5, transparent 70%); animation:drift1 26s ease-in-out infinite;}
 .blob2{width:38vw; height:38vw; top:20vh; right:-12vw; background:radial-gradient(circle at 60% 40%, #8FA0D6, transparent 70%); animation:drift2 32s ease-in-out infinite;}
 .blob3{width:42vw; height:42vw; bottom:-16vw; left:10vw; background:radial-gradient(circle at 50% 50%, #D9B36C, transparent 70%); animation:drift3 30s ease-in-out infinite; opacity:0.35;}
@@ -120,6 +152,7 @@ a{color:inherit;}
 
 @media (prefers-reduced-motion: reduce){
   .blob{animation:none !important;}
+  html{scroll-behavior:auto;}
 }
 
 /* ---------- Glass base — liquid-glass refraction ---------- */
@@ -127,8 +160,9 @@ a{color:inherit;}
   background:
     radial-gradient(120% 140% at 12% -10%, rgba(255,255,255,0.20), transparent 45%),
     linear-gradient(155deg, var(--glass-bg-strong), var(--glass-bg) 55%, rgba(255,255,255,0.025));
-  backdrop-filter: blur(28px) saturate(180%) brightness(1.05);
-  -webkit-backdrop-filter: blur(28px) saturate(180%) brightness(1.05);
+  background-color: rgba(30,36,64,0.86); /* opaque base so text stays crisp the instant blur(0) kicks in while scrolling */
+  backdrop-filter: blur(var(--blur-glass)) saturate(var(--blur-sat)) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(var(--blur-sat)) brightness(1.05);
   border:1px solid var(--glass-border);
   border-radius:var(--radius-lg);
   box-shadow:
@@ -138,8 +172,12 @@ a{color:inherit;}
     inset 0 0 0 1px rgba(255,255,255,0.04),
     inset 0 -14px 24px -18px rgba(0,0,0,0.55);
   position:relative;
+  contain: layout style paint;
   transition: border-color .3s ease, box-shadow .3s ease;
 }
+html.is-scrolling .glass,
+html.is-scrolling .glass-pill,
+html.is-scrolling .back-btn{transition:none !important;}
 .glass::before{
   content:"";
   position:absolute; inset:0; border-radius:inherit; pointer-events:none;
@@ -159,12 +197,14 @@ a{color:inherit;}
   background:
     radial-gradient(140% 160% at 15% -20%, rgba(255,255,255,0.22), transparent 50%),
     var(--glass-bg-strong);
-  backdrop-filter: blur(22px) saturate(180%) brightness(1.05);
-  -webkit-backdrop-filter: blur(22px) saturate(180%) brightness(1.05);
+  background-color: rgba(30,36,64,0.8);
+  backdrop-filter: blur(var(--blur-pill)) saturate(var(--blur-sat)) brightness(1.05);
+  -webkit-backdrop-filter: blur(var(--blur-pill)) saturate(var(--blur-sat)) brightness(1.05);
   border:1px solid var(--glass-border);
   border-radius:999px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 4px 18px rgba(0,0,0,0.28);
   position:relative;
+  contain: layout style paint;
 }
 
 /* ---------- Top bar ---------- */
@@ -333,6 +373,19 @@ a{color:inherit;}
 .card{
   padding:24px; cursor:pointer; transition:transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s, border-color .3s;
   overflow:hidden;
+  content-visibility:auto;
+  contain-intrinsic-size: 260px 220px;
+}
+/* Touch/coarse-pointer devices get no benefit from the 3D hover-tilt (no hover state) —
+   skip it entirely so we don't spend GPU/JS cycles animating a transform nobody sees,
+   and it can't fight with scroll momentum on phones/tablets. */
+@media (hover:none), (pointer:coarse){
+  .tilt-el, .card, .chan-card, .channel-strip, .ts-video-item, .glass-pill.eyebrow{
+    transform:none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce){
+  .card, .chan-card, .channel-strip, .ts-video-item{transition:none !important;}
 }
 .card:hover{
   transform:translateY(-6px);
@@ -370,7 +423,7 @@ a{color:inherit;}
 
 /* ---------- Units accordion ---------- */
 .unit-list{display:flex; flex-direction:column; gap:14px; margin-top:6px;}
-.unit{padding:0; overflow:hidden;}
+.unit{padding:0; overflow:hidden; contain:layout style;}
 .unit-head{
   display:flex; align-items:center; justify-content:space-between; gap:14px;
   padding:20px 22px; cursor:pointer;
@@ -468,10 +521,12 @@ a{color:inherit;}
   background:
     radial-gradient(140% 160% at 15% -20%, rgba(255,255,255,0.18), transparent 50%),
     rgba(255,255,255,0.055);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  background-color: rgba(30,36,64,0.55);
+  backdrop-filter: blur(var(--blur-btn)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur-btn)) saturate(160%);
   border:1px solid rgba(255,255,255,0.16);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 14px rgba(0,0,0,0.25);
+  contain: layout style paint;
   transition: background .25s, border-color .25s, transform .2s;
 }
 .back-btn:hover{background:
@@ -481,7 +536,7 @@ a{color:inherit;}
 
 /* ---------- Popular channels section ---------- */
 .channels-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-top:16px;}
-.chan-card{padding:20px;}
+.chan-card{padding:20px; content-visibility:auto; contain-intrinsic-size: 240px 180px;}
 .chan-card h4{font-size:15.5px;}
 .chan-card p{font-size:12.5px; color:var(--text-muted); margin-top:8px; line-height:1.5;}
 .chan-card .pill-link{margin-top:14px;}
@@ -695,6 +750,87 @@ const SYLLABUS_DATA = {"channels": {"telugutechsteps": {"name": "Telugu Tech Ste
   const elChannelsSection = document.getElementById("channelsSection");
   const elChannelStripHolder = document.getElementById("channelStripHolder");
 
+  /* ---------------- Adaptive GPU/perf tiering ----------------
+     Classifies the device once at load (cores, memory, pointer type) AND verifies
+     it against real measured frame times, then exposes the result as a class on
+     <html> (gfx-high / gfx-medium / gfx-low). CSS reads --blur-glass etc. from
+     this to scale blur cost to what the device can actually composite smoothly. */
+  const SUPPORTS_HOVER = matchMedia("(hover:hover) and (pointer:fine)").matches;
+  const PREFERS_REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  (function initGfxTier(){
+    const html = document.documentElement;
+    let tier = "high";
+    try{
+      const mem = navigator.deviceMemory || 4;
+      const cores = navigator.hardwareConcurrency || 4;
+      const saveData = !!(navigator.connection && navigator.connection.saveData);
+      if(mem <= 2 || cores <= 2 || saveData){
+        tier = "low";
+      } else if(mem <= 4 || cores <= 4 || !SUPPORTS_HOVER){
+        tier = "medium";
+      }
+    }catch(e){}
+    html.classList.add("gfx-" + tier);
+
+    // Real-world check: sample ~40 frames; if the device is visibly dropping frames
+    // even at idle, step the blur cost down further regardless of what the static
+    // heuristics above guessed (covers low-end GPUs with decent-looking specs).
+    if(tier !== "low"){
+      let frames = 0, slow = 0, last = performance.now();
+      function tick(now){
+        const dt = now - last; last = now;
+        frames++;
+        if(dt > 30) slow++; // frame took longer than ~33fps budget
+        if(frames < 40){
+          requestAnimationFrame(tick);
+        } else if(slow > frames * 0.3){
+          html.classList.remove("gfx-high","gfx-medium");
+          html.classList.add("gfx-low");
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+  })();
+
+  /* ---------------- Scroll-aware effect suspension ----------------
+     Fixes the "shows only background color while scrolling fast, then pops in
+     once scrolling stops" issue: that was the compositor falling behind trying
+     to recompute many blurred backdrop-filter layers every frame during a fast
+     scroll. Instead of letting it fall behind, we drop blur to 0 the instant a
+     scroll starts (near-free to render) and smoothly restore it ~140ms after
+     the scroll settles, so content always paints immediately and full glass
+     styling returns once there's GPU headroom again. */
+  (function initScrollPerf(){
+    const html = document.documentElement;
+    let scrollTimer = null, ticking = false;
+    function onScrollSettleCheck(){
+      html.classList.add("is-scrolling");
+      if(scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(() => html.classList.remove("is-scrolling"), 140);
+    }
+    window.addEventListener("scroll", () => {
+      if(!ticking){
+        ticking = true;
+        requestAnimationFrame(() => { onScrollSettleCheck(); ticking = false; });
+      }
+    }, {passive:true});
+    topicSlideReadyEls().forEach(el => {
+      el.addEventListener("scroll", () => {
+        if(!ticking){
+          ticking = true;
+          requestAnimationFrame(() => { onScrollSettleCheck(); ticking = false; });
+        }
+      }, {passive:true});
+    });
+    document.addEventListener("visibilitychange", () => {
+      html.classList.toggle("tab-hidden", document.hidden);
+    });
+  })();
+  function topicSlideReadyEls(){
+    const el = document.getElementById("topicSlide");
+    return el ? [el] : [];
+  }
+
   /* ---------------- Premium 3D tilt + ripple engine ---------------- */
   const TILT_SELECTOR = ".tilt-el, .card, .chan-card, .channel-strip, .ts-video-item, .glass-pill.eyebrow";
   const RIPPLE_SELECTOR = ".ripple-el, .card, .pill-link, .back-btn, .menu-btn, .close-btn, .ts-back, .menu-item, .topic-chip, .otc, .ts-video-item, .brand, .trail-item";
@@ -702,6 +838,10 @@ const SYLLABUS_DATA = {"channels": {"telugutechsteps": {"name": "Telugu Tech Ste
   function addTiltEffect(el){
     if(el.dataset.tiltBound) return;
     el.dataset.tiltBound = "1";
+    // Skip entirely on touch/coarse-pointer devices and reduced-motion preference —
+    // there's no hover on touch, so this would just be wasted GPU/JS work that can
+    // fight with scroll momentum.
+    if(!SUPPORTS_HOVER || PREFERS_REDUCED_MOTION) return;
     el.style.transformStyle = "preserve-3d";
     el.addEventListener("mousemove", (e) => {
       const r = el.getBoundingClientRect();
@@ -751,18 +891,21 @@ const SYLLABUS_DATA = {"channels": {"telugutechsteps": {"name": "Telugu Tech Ste
   (function initParallax(){
     const wraps = document.querySelectorAll(".blob-wrap");
     if(!wraps.length) return;
+    if(!SUPPORTS_HOVER || PREFERS_REDUCED_MOTION) return; // no mouse on touch; skip on reduced-motion too
     let raf = null, lastX = 0, lastY = 0;
     window.addEventListener("mousemove", (e) => {
       lastX = e.clientX / window.innerWidth - 0.5;
       lastY = e.clientY / window.innerHeight - 0.5;
       if(raf) return;
       raf = requestAnimationFrame(() => {
-        wraps.forEach(w => {
-          const depth = parseFloat(w.getAttribute("data-depth")) || 1;
-          const tx = lastX * depth * 22;
-          const ty = lastY * depth * 22;
-          w.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
-        });
+        if(!document.documentElement.classList.contains("is-scrolling")){
+          wraps.forEach(w => {
+            const depth = parseFloat(w.getAttribute("data-depth")) || 1;
+            const tx = lastX * depth * 22;
+            const ty = lastY * depth * 22;
+            w.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
+          });
+        }
         raf = null;
       });
     });
