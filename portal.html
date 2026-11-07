@@ -74,6 +74,69 @@ body{
 .btn.primary:hover{filter:brightness(1.08)}
 .field::placeholder{color:#9aa5b3}
 .bubble{background:rgba(222,224,225,.07)}
+
+/* Applied design system — based on the supplied Dribbble glassmorphism reference */
+:root{
+  color-scheme:dark;
+  --bg:#16191F;
+  --panel:rgba(81,85,93,.28);
+  --panel2:rgba(81,85,93,.38);
+  --line:rgba(222,224,225,.18);
+  --muted:#b9c0c8;
+  --text:#DEE0E1;
+  --violet:#6884A6;
+  --cyan:#aebfd2;
+  --green:#6884A6;
+  --red:#aebfd2;
+  --shadow:0 24px 70px rgba(0,0,0,.34);
+}
+body{
+  background:
+    radial-gradient(ellipse at 12% 4%,rgba(74,116,182,.20),transparent 42%),
+    radial-gradient(ellipse at 88% 20%,rgba(104,132,166,.14),transparent 38%),
+    linear-gradient(145deg,#16191F 0%,#242830 52%,#171b22 100%);
+  color:#DEE0E1;
+}
+.orb{background:#6884A6;opacity:.10}.orb.b{background:#4A74B6;opacity:.11}
+.glass{
+  background:linear-gradient(135deg,rgba(222,224,225,.085),rgba(81,85,93,.22) 48%,rgba(74,116,182,.09));
+  border-color:rgba(222,224,225,.18);
+  box-shadow:0 22px 60px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.09);
+  backdrop-filter:blur(28px) saturate(130%);
+}
+.topbar{background:rgba(28,32,39,.78)}
+.logo{background:linear-gradient(135deg,#DEE0E1,#6884A6 58%,#4A74B6);color:#16191F;box-shadow:0 8px 28px #4A74B644}
+.btn{background:rgba(222,224,225,.055);border-color:rgba(222,224,225,.18);color:#DEE0E1}
+.btn:hover{background:rgba(222,224,225,.13);border-color:#a9c2df88}
+.btn.primary{background:linear-gradient(115deg,#DEE0E1,#a7b8cd 46%,#6884A6);color:#16191F;border:0;box-shadow:0 10px 25px #4A74B633}
+.btn.danger{color:#c8d0da}
+.layout{grid-template-columns:248px minmax(0,1fr);gap:22px}
+.sidebar{background:linear-gradient(160deg,rgba(222,224,225,.10),rgba(81,85,93,.23) 62%,rgba(74,116,182,.10))}
+.nav-label{color:#aeb8c4}
+.nav-btn{color:#c5cbd2}
+.nav-btn:hover,.nav-btn.active{background:linear-gradient(100deg,#6884a633,#4A74B622);color:#f3f5f7;box-shadow:inset 0 0 0 1px #b9cbe122}
+.nav-btn.active{color:#DEE0E1}
+.eyebrow{color:#b8cce2}
+.hero{background:linear-gradient(118deg,rgba(74,116,182,.22),rgba(104,132,166,.15) 60%,rgba(222,224,225,.045))}
+.hero p{color:#c0c6ce}
+.stat{background:linear-gradient(145deg,rgba(222,224,225,.10),rgba(81,85,93,.19) 58%,rgba(74,116,182,.09))}
+.stat .label,.stat small,.meta,.small-help,.side-foot,.footer{color:#aeb8c4}
+.tag{background:#6884a626;color:#d7e5f5;border-color:#a9c2df30}
+.field{background:rgba(22,25,31,.68);border-color:rgba(222,224,225,.18);color:#f1f3f5}
+.field:focus{border-color:#9db9da;box-shadow:0 0 0 3px #6884a622}
+.field::placeholder{color:#9aa5b3}
+.list-item{background:linear-gradient(120deg,rgba(222,224,225,.075),rgba(81,85,93,.13));border-color:rgba(222,224,225,.14)}
+.notice{background:rgba(104,132,166,.17);border-color:rgba(169,194,223,.26);color:#e0e9f4}
+.notice.warn{background:rgba(74,116,182,.16);border-color:rgba(169,194,223,.30);color:#d8e6f6}
+.empty{color:#c0c8d3;border-color:rgba(222,224,225,.22)}
+.bubble{background:rgba(222,224,225,.07)}
+.bubble.user{background:#4A74B633;border-color:#9eb8d833}
+.auth-card,.form-card,.chat-shell,.sidebar,.hero,.stat,.card{border-color:rgba(222,224,225,.17);box-shadow:0 22px 58px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.075)}
+.auth-card{background:linear-gradient(145deg,rgba(222,224,225,.12),rgba(81,85,93,.24) 48%,rgba(74,116,182,.14))}
+.user-chip{color:#d0d5dc;background:rgba(222,224,225,.06);border-color:rgba(222,224,225,.16)}
+#openPortalBtn{white-space:nowrap}
+@media(max-width:600px){#openPortalBtn{font-size:10px;padding:8px 9px}.top-actions{gap:6px}}
+
 </style>
 </head>
 <body>
@@ -81,7 +144,7 @@ body{
 <div class="shell">
 <header class="topbar glass">
   <div class="brand"><div class="logo">C</div><div>CSE <span style="color:var(--cyan)">PORTAL</span><small>STUDENT SPACE · 2026</small></div></div>
-  <div class="top-actions"><span id="userChip" class="user-chip">Open class portal</span><button id="adminAccessBtn" class="btn small">Admin access ↗</button><button id="signOutBtn" class="btn small hidden">Sign out ↗</button></div>
+  <div class="top-actions"><button id="openPortalBtn" class="btn small" type="button">Open class portal ↗</button><span id="userChip" class="user-chip">Public dashboard</span><button id="adminAccessBtn" class="btn small">Admin access ↗</button><button id="signOutBtn" class="btn small hidden">Sign out ↗</button></div>
 </header>
 
 <section id="authScreen" class="auth-wrap hidden">
@@ -227,7 +290,8 @@ let pendingSubmissionId=null;
 function openAuth(message){$("authScreen").classList.add("auth-modal");show("authScreen",true);if(message)notice(message,"warn")}
 function closeAuth(){show("authScreen",false);$("authScreen").classList.remove("auth-modal")}
 $("closeAuthBtn").addEventListener("click",closeAuth);
-function showPublicApp(){currentUser=null;profile=null;closeAuth();show("pendingScreen",false);show("appScreen",true);show("signOutBtn",false);show("adminNav",false);$("userChip").textContent="Open class portal";$("welcomeName").textContent="Your semester, organised.";refreshAll()}
+function showPublicApp(){currentUser=null;profile=null;closeAuth();show("pendingScreen",false);show("appScreen",true);show("signOutBtn",false);show("adminNav",false);$("userChip").textContent="Public dashboard";$("welcomeName").textContent="Your semester, organised.";refreshAll()}
+$("openPortalBtn").addEventListener("click",()=>{showPublicApp();page("overview");window.scrollTo({top:0,behavior:"smooth"})});
 $("adminAccessBtn").addEventListener("click",()=>{if(profile?.role==="admin"){page("admin");return}if(profile){alert("This account is not an administrator. Sign out before using an admin account.");return}openAuth("Administrator sign-in: use an approved admin email address.")});
 async function enterApp(user){
   currentUser=user;
