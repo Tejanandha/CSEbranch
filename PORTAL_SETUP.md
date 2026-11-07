@@ -11,7 +11,7 @@ The portal UI is in `portal.html` and is linked from the existing syllabus explo
 - Student data tables: profiles, student_allowlist, study_materials, assignments, submissions, announcements, daily_news, record_deadlines
 - Private Storage bucket: `portal-files`
 - Edge Function: `portal-ai`
-- Initial portal admin allowlist entry: `reddymadhavi736@gmail.com` (the email on the connected GitHub profile)
+- An initial portal admin address is pre-approved in the private Supabase allowlist; it is intentionally not repeated in this public repository.
 
 ## Important remaining provider setup
 
