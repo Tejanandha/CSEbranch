@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0a1020">
 <title>CSE Student Portal — Teja</title>
-<meta name="description" content="A private CSE student portal for study materials, homework, assignments, records and daily updates.">
+<meta name="description" content="A CSE student portal for study materials, homework, assignments, records and daily updates.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -309,7 +309,7 @@ function readableAuthError(value){
 const callbackError = authParams.get("error_description") || authParams.get("error") ||
   authHashParams.get("error_description") || authHashParams.get("error");
 if(callbackError){
-  notice(readableAuthError(callbackError)+" If this is a redirect URL error, add "+PORTAL_REDIRECT_URL+" to Supabase Authentication → URL Configuration.","warn");
+  openAuth(readableAuthError(callbackError)+" If this is a redirect URL error, add "+PORTAL_REDIRECT_URL+" to Supabase Authentication → URL Configuration.");
 }else if(authParams.has("code")){
   notice("Finishing your secure sign-in…");
 }
