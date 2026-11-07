@@ -25,8 +25,8 @@
   --text:#f2f4f7;
   --violet:#8da8ca;
   --cyan:#a9c2df;
-  --green:#a9d8c3;
-  --red:#ff9da8;
+  --green:#6884a6;
+  --red:#dee0e1;
   --shadow:0 24px 70px rgba(0,0,0,.28);
 }
 body{
@@ -70,6 +70,7 @@ body{
 .empty{color:#c0c8d3;border-color:rgba(222,224,225,.22)}
 .meta,.small-help,.side-foot,.footer{color:#a6b0be}
 .nav-label{color:#a4afbd}.nav-btn{color:#c4ccd6}
+.btn.danger,.pill-online{color:#dee0e1}
 .btn.primary:hover{filter:brightness(1.08)}
 .field::placeholder{color:#9aa5b3}
 .bubble{background:rgba(222,224,225,.07)}
@@ -291,13 +292,15 @@ async function openSubmission(id){
 $("materialSearch").addEventListener("input",renderMaterials);$("taskFilter").addEventListener("change",renderTasks);
 const PORTAL_REDIRECT_URL = window.location.origin + window.location.pathname;
 const authParams = new URLSearchParams(window.location.search);
+const authHashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
 function readableAuthError(value){
   const raw=String(value||"Sign-in link could not be verified.").replace(/\\+/g," ");
   try{return decodeURIComponent(raw)}catch{return raw}
 }
-if(authParams.has("error") || authParams.has("error_description")){
-  const reason=readableAuthError(authParams.get("error_description")||authParams.get("error"));
-  notice(reason+" If this is a redirect URL error, add "+PORTAL_REDIRECT_URL+" to Supabase Authentication → URL Configuration.","warn");
+const callbackError = authParams.get("error_description") || authParams.get("error") ||
+  authHashParams.get("error_description") || authHashParams.get("error");
+if(callbackError){
+  notice(readableAuthError(callbackError)+" If this is a redirect URL error, add "+PORTAL_REDIRECT_URL+" to Supabase Authentication → URL Configuration.","warn");
 }else if(authParams.has("code")){
   notice("Finishing your secure sign-in…");
 }
