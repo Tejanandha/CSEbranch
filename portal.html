@@ -139,7 +139,7 @@
             <input name="email" class="field full" type="email" placeholder="student@college.edu" required><input name="name" class="field full" placeholder="Student name (optional)">
             <button class="btn primary full" type="submit">Add to approved list</button></div><p class="small-help">You can add at least 80 students. Only approved emails can access the private portal.</p></form>
         </div>
-        <div class="form-card glass"><h3>Bulk student approval</h3><p id="rosterCount" class="notice">Approved email addresses: loading…</p><p class="small-help" style="margin-bottom:10px">Upload a CSV with columns <code>email,name</code>. Existing accounts will also be approved.</p><input id="rosterCsv" class="field file-input" type="file" accept=".csv,text/csv"><button id="importCsvBtn" class="btn" style="margin-top:10px">Import CSV roster</button><div id="rosterResult" class="small-help" style="margin-top:9px"></div></div>
+        <div class="form-card glass"><h3>Bulk student approval</h3><p id="rosterCount" class="notice">Approved email addresses: loading…</p><p class="small-help" style="margin-bottom:10px">Upload a CSV with columns <code>email,name</code>. Existing accounts will also be approved.</p><input id="rosterCsv" class="field file-input" type="file" accept=".csv,text/csv"><button id="importCsvBtn" class="btn" style="margin-top:10px">Import CSV roster</button><div id="rosterResult" class="small-help" style="margin-top:9px"></div></div><div class="form-card glass"><h3>Recent student submissions</h3><p class="small-help" style="margin-bottom:10px">Latest work received from students.</p><div id="submissionsList" class="list"><div class="empty">No submissions received yet.</div></div></div>
       </section>
     </main>
   </div>
@@ -191,7 +191,20 @@ async function refreshAll(){
   const feed=[...cache.tasks.slice(0,3).map(x=>({...x,kind:x.category||"task"})),...cache.records.slice(0,2).map(x=>({...x,kind:"record"}))].sort((a,b)=>new Date(a.due_at||"9999").getTime()-new Date(b.due_at||"9999").getTime()).slice(0,5);
   $("overviewFeed").innerHTML=feed.length?feed.map(x=>`<div class="list-item glass"><div><h3>${safe(x.title)}</h3><p>${safe(x.description||x.notes||"Submission reminder")}</p><div class="meta"><span>${safe(x.subject||"Class work")}</span><span>${safe(x.kind)}</span><span>Due: ${fmt(x.due_at)}</span></div></div></div>`).join(""):'<div class="empty">No tasks or deadlines have been posted yet.</div>';
   renderMaterials();renderTasks();renderRecords();renderUpdates();renderNews();
-  if(profile?.role==="admin"){const {count}=await supabase.from("student_allowlist").select("*",{count:"exact",head:true});$("rosterCount").textContent="Approved email addresses: "+(count??0)+" (target capacity: 80+)";}
+  if(profile?.role==="admin"){
+    const {count}=await supabase.from("student_allowlist").select("*",{count:"exact",head:true});
+    $("rosterCount").textContent="Approved email addresses: "+(count??0)+" (target capacity: 80+)";
+    const {data:subs}=await supabase.from("submissions").select("*").order("submitted_at",{ascending:false}).limit(100);
+    const rows=subs||[], userIds=[...new Set(rows.map(x=>x.student_id))], taskIds=[...new Set(rows.map(x=>x.assignment_id))];
+    const [people,tasksForSubs]=await Promise.all([
+      userIds.length?supabase.from("profiles").select("id,email,full_name").in("id",userIds):Promise.resolve({data:[]}),
+      taskIds.length?supabase.from("assignments").select("id,title").in("id",taskIds):Promise.resolve({data:[]})
+    ]);
+    const peopleById=Object.fromEntries((people.data||[]).map(x=>[x.id,x]));
+    const taskById=Object.fromEntries((tasksForSubs.data||[]).map(x=>[x.id,x]));
+    $("submissionsList").innerHTML=rows.length?rows.map(x=>{const p=peopleById[x.student_id]||{},t=taskById[x.assignment_id]||{};return `<div class="list-item"><div><h3>${safe(t.title||"Assignment")}</h3><p>${safe(p.full_name||p.email||"Student")} · ${safe(x.submission_text||"File submission")}</p><div class="meta"><span>${fmt(x.submitted_at)}</span></div></div>${x.file_path?`<button class="btn small" data-subfile="${safe(x.file_path)}">Open file ↗</button>`:"<span class='tag'>Text only</span>"}</div>`}).join(""):'<div class="empty">No submissions received yet.</div>';
+    $("submissionsList").querySelectorAll("[data-subfile]").forEach(b=>b.addEventListener("click",async()=>{try{window.open(await signedFile(b.dataset.subfile),"_blank","noopener")}catch(e){alert(e.message)}}));
+  }
 }
 async function signedFile(path){
   const {data,error}=await supabase.storage.from("portal-files").createSignedUrl(path,300);
