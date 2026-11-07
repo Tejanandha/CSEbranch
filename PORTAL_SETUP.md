@@ -26,12 +26,17 @@ In Supabase Dashboard → Authentication → URL Configuration:
 
 ### 2. Email magic links
 
-The portal requests email magic links (not numeric OTP codes). For delivery to the whole class:
+The portal requests email magic links (not numeric OTP codes). The Supabase default email service is unsuitable for class login: it only sends to project-organization team addresses and currently allows 2 emails per hour. See the [Supabase SMTP guide](https://supabase.com/docs/guides/auth/auth-smtp).
 
-- Configure a free-tier SMTP provider in Supabase Dashboard → Authentication → SMTP Settings.
-- In the email template, use the confirmation URL link (for example, `{{ .ConfirmationURL }}`) rather than a numeric token.
-- Set the email send rate limit to 10 per hour if the provider and project settings permit it.
-- Supabase's default mail service is for testing and is not suitable for reliable class-wide delivery.
+A no-cost option to evaluate is [Brevo Free](https://www.brevo.com/), which currently includes SMTP/transactional email and 300 email sends per day. That is enough for an initial 80-student rollout, subject to Brevo approving the sender and account. See [Brevo's official free-plan limits](https://help.brevo.com/hc/en-us/articles/208580669-FAQs-What-are-the-limits-of-the-Free-plan).
+
+1. Create a Brevo Free account and verify a sender email/domain.
+2. In Brevo, create SMTP credentials (use the SMTP key, not your normal account password).
+3. In Supabase Dashboard → Authentication → Emails → SMTP Settings, enable custom SMTP and enter the host, port, SMTP login, SMTP key, and verified sender.
+4. In Supabase Dashboard → Authentication → Rate Limits, set the email send rate to 10 per hour if available. Supabase's custom SMTP default is 30 new users per hour.
+5. Keep the Magic Link template link-based (use `{{ .ConfirmationURL }}`, not `{{ .Token }}`).
+
+Do not put SMTP credentials in this repository or in the browser code.
 
 ### 3. Google sign-in
 
