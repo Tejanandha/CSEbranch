@@ -55,7 +55,24 @@ body{
 .field:focus{border-color:#9db9da;box-shadow:0 0 0 3px #6884a622}
 .bubble.user{background:#4a74b633;border-color:#9eb8d833}
 .stat{background:linear-gradient(145deg,rgba(222,224,225,.09),rgba(81,85,93,.16))}
-
+/* Refined graphite, silver and steel-blue glass finish */
+.auth-card,.form-card,.chat-shell,.sidebar,.hero,.stat,.card{
+  border-color:rgba(222,224,225,.17);
+  box-shadow:0 22px 58px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.075);
+}
+.auth-card{position:relative;overflow:hidden;background:linear-gradient(145deg,rgba(222,224,225,.12),rgba(81,85,93,.24) 48%,rgba(74,116,182,.14));border-radius:30px}
+.auth-card:before{content:"";position:absolute;inset:-1px auto auto 18%;width:64%;height:1px;background:linear-gradient(90deg,transparent,rgba(222,224,225,.62),transparent)}
+.hero{box-shadow:0 24px 64px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.12)}
+.stat{background:linear-gradient(145deg,rgba(222,224,225,.12),rgba(81,85,93,.18) 58%,rgba(74,116,182,.10))}
+.list-item{background:linear-gradient(120deg,rgba(222,224,225,.075),rgba(81,85,93,.13));border-color:rgba(222,224,225,.14)}
+.notice{background:rgba(104,132,166,.17);border-color:rgba(169,194,223,.26);color:#e0e9f4}
+.notice.warn{background:rgba(74,116,182,.16);border-color:rgba(169,194,223,.30);color:#d8e6f6}
+.empty{color:#c0c8d3;border-color:rgba(222,224,225,.22)}
+.meta,.small-help,.side-foot,.footer{color:#a6b0be}
+.nav-label{color:#a4afbd}.nav-btn{color:#c4ccd6}
+.btn.primary:hover{filter:brightness(1.08)}
+.field::placeholder{color:#9aa5b3}
+.bubble{background:rgba(222,224,225,.07)}
 </style>
 </head>
 <body>
@@ -274,9 +291,15 @@ async function openSubmission(id){
 $("materialSearch").addEventListener("input",renderMaterials);$("taskFilter").addEventListener("change",renderTasks);
 const PORTAL_REDIRECT_URL = window.location.origin + window.location.pathname;
 const authParams = new URLSearchParams(window.location.search);
+function readableAuthError(value){
+  const raw=String(value||"Sign-in link could not be verified.").replace(/\\+/g," ");
+  try{return decodeURIComponent(raw)}catch{return raw}
+}
 if(authParams.has("error") || authParams.has("error_description")){
-  const reason=authParams.get("error_description")||authParams.get("error")||"Sign-in link could not be verified.";
-  notice(decodeURIComponent(reason.replace(/\\+/g," ")),"warn");
+  const reason=readableAuthError(authParams.get("error_description")||authParams.get("error"));
+  notice(reason+" If this is a redirect URL error, add "+PORTAL_REDIRECT_URL+" to Supabase Authentication → URL Configuration.","warn");
+}else if(authParams.has("code")){
+  notice("Finishing your secure sign-in…");
 }
 $("emailForm").addEventListener("submit",async e=>{
   e.preventDefault();
@@ -285,12 +308,12 @@ $("emailForm").addEventListener("submit",async e=>{
   $("emailSubmit").disabled=true;
   $("emailSubmit").textContent="Sending secure link…";
   try{
-    const {data,error}=await supabase.auth.signInWithOtp({
+    const {error}=await supabase.auth.signInWithOtp({
       email,
       options:{emailRedirectTo:PORTAL_REDIRECT_URL,shouldCreateUser:true}
     });
     if(error)throw error;
-    notice("Sign-in link requested for "+email+". Check Inbox and Spam, then open the newest link on this same browser. If no email arrives, the Supabase SMTP provider still needs setup.");
+    notice("Secure sign-in link requested for "+email+". Open the newest email link on this same browser/device. If no email arrives, Supabase's default mail service may restrict delivery; class-wide email needs a custom SMTP provider.");
   }catch(err){
     notice(err.message||"Could not send the sign-in link. Check Supabase Auth email settings.","warn");
   }finally{
@@ -299,8 +322,14 @@ $("emailForm").addEventListener("submit",async e=>{
   }
 });
 $("googleBtn").addEventListener("click",async()=>{
-  const {error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:PORTAL_REDIRECT_URL}});
-  if(error)notice(error.message+" — Google provider may not be enabled in Supabase yet.","warn");
+  const button=$("googleBtn");button.disabled=true;button.textContent="Connecting to Google…";
+  try{
+    const {error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:PORTAL_REDIRECT_URL}});
+    if(error)throw error;
+  }catch(error){
+    notice((error.message||"Google sign-in failed.")+" Check Google under Supabase Authentication → Providers and confirm its callback URL.","warn");
+    button.disabled=false;button.textContent="◉ Continue with Google";
+  }
 });
 async function signOut(){await supabase.auth.signOut();currentUser=null;profile=null;show("appScreen",false);show("pendingScreen",false);show("authScreen",true);show("signOutBtn",false)}
 $("signOutBtn").addEventListener("click",signOut);$("pendingSignOut").addEventListener("click",signOut);
